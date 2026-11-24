@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zombie Corridor</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101522;color:white;font-family:Arial;text-align:center}
+h1{color:#62e6a5;margin:18px}
+#game{width:95%;max-width:650px;height:330px;background:linear-gradient(#26364b,#111b2a);border:3px solid #62e6a5;border-radius:14px;margin:15px auto;position:relative;overflow:hidden}
+#ground{position:absolute;bottom:0;width:100%;height:48px;background:#555}
+#hero{position:absolute;bottom:48px;left:45px;font-size:42px}
+.obstacle{position:absolute;bottom:48px;font-size:35px}
+.zombie{position:absolute;bottom:48px;font-size:38px}
+#bullet{position:absolute;display:none;font-size:25px}
+#score{font-size:20px;color:#ffe36e}
+button{border:0;border-radius:12px;padding:14px 22px;margin:6px;font-size:18px;font-weight:bold;background:#62e6a5;color:#102018}
+#shoot{background:#ffbb55}
+#message{font-size:20px;color:#ffe36e;min-height:28px}
+</style>
+</head>
+<body>
+<h1>🧟 Zombie Corridor</h1>
+<div id="score">Score: 0</div>
+<div id="game">
+  <div id="ground"></div>
+  <div id="hero">🧍</div>
+  <div id="bullet">🟡</div>
+</div>
+<div id="message">اضغط Start Game للبدء</div>
+<button onclick="startGame()">Start Game</button>
+<br>
+<button onclick="move()">تقدم ➡️</button>
+<button onclick="jump()">اقفز ⬆️</button>
+<button id="shoot" onclick="shoot()">إطلاق 🎯</button>
+
+<script>
+const game=document.getElementById("game");
+const hero=document.getElementById("hero");
+const scoreText=document.getElementById("score");
+const message=document.getElementById("message");
+const bullet=document.getElementById("bullet");
+
+let score=0;
+let running=false;
+let jumping=false;
+let hasWeapon=false;
+let heroX=45;
+let objects=[];
+
+function startGame(){
+  score=0;
+  heroX=45;
+  running=true;
+  jumping=false;
+  hasWeapon=false;
+  objects.forEach(o=>o.remove());
+  objects=[];
+  hero.style.left=heroX+"px";
+  hero.style.bottom="48px";
+  hero.textContent="🧍";
+  bullet.style.display="none";
+  scoreText.textContent="Score: 0";
+  message.textContent="انطلق! تجنب الحواجز";
+  createObject("🌵",300,"obstacle");
+  createObject("🪨",500,"obstacle");
+  createObject("🧟",750,"zombie");
+}
+
+function createObject(symbol,x,type){
+  const el=document.createElement("div");
+  el.className=type;
+  el.textContent=symbol;
+  el.style.left=x+"px";
+  game.appendChild(el);
+  objects.push(el);
+}
+
+function move(){
+  if(!running)return;
+  heroX+=35;
+  if(heroX>game.clientWidth-75)heroX=45;
+  hero.style.left=heroX+"px";
+  score+=5;
+  scoreText.textContent="Score: "+score;
+  if(score>=100&&!hasWeapon){
+    hasWeapon=true;
+    hero.textContent="🔫";
+    message.textContent="وجدت أداة الإطلاق! اضغط إطلاق";
+  }
+  if(score%40===0)createObject("🧟",game.clientWidth,"zombie");
+  if(score%25===0)createObject("🌵",game.clientWidth,"obstacle");
+}
+
+function jump(){
+  if(!running||jumping)return;
+  jumping=true;
+  hero.style.bottom="145px";
+  setTimeout(()=>{
+    hero.style.bottom="48px";
+    jumping=false;
+  },650);
+}
+
+function shoot(){
+  if(!running)return;
+  if(!hasWeapon){
+    message.textContent="تقدم أولًا حتى تجد أداة الإطلاق!";
+    return;
+  }
+  bullet.style.display="block";
+  bullet.style.left=(heroX+55)+"px";
+  bullet.style.bottom="105px";
+  let x=heroX+55;
+  const timer=setInterval(()=>{
+    x+=18;
+    bullet.style.left=x+"px";
+    if(x>game.clientWidth){
+      clearInterval(timer);
+      bullet.style.display="none";
+    }
+    objects.forEach(o=>{
+      if(o.className==="zombie"&&Math.abs(o.offsetLeft-x)<35){
+        o.remove();
+        objects=objects.filter(a=>a!==o);
+        score+=20;
+        scoreText.textContent="Score: "+score;
+        message.textContent="أصبت الزومبي! +20";
+        clearInterval(timer);
+        bullet.style.display="none";
+      }
+    });
+  },30);
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.code==="ArrowRight")move();
+  if(e.code==="Space"){e.preventDefault();jump();}
+  if(e.code==="Enter")shoot();
+});
+</script>
+</body>
+</html>
