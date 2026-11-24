@@ -1,145 +1,288 @@
-
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Zombie Corridor</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#101522;color:white;font-family:Arial;text-align:center}
-h1{color:#62e6a5;margin:18px}
-#game{width:95%;max-width:650px;height:330px;background:linear-gradient(#26364b,#111b2a);border:3px solid #62e6a5;border-radius:14px;margin:15px auto;position:relative;overflow:hidden}
-#ground{position:absolute;bottom:0;width:100%;height:48px;background:#555}
-#hero{position:absolute;bottom:48px;left:45px;font-size:42px}
-.obstacle{position:absolute;bottom:48px;font-size:35px}
-.zombie{position:absolute;bottom:48px;font-size:38px}
-#bullet{position:absolute;display:none;font-size:25px}
-#score{font-size:20px;color:#ffe36e}
-button{border:0;border-radius:12px;padding:14px 22px;margin:6px;font-size:18px;font-weight:bold;background:#62e6a5;color:#102018}
-#shoot{background:#ffbb55}
-#message{font-size:20px;color:#ffe36e;min-height:28px}
+  * { box-sizing: border-box; user-select: none; }
+  body { margin: 0; background: #101522; color: white; font-family: Arial, sans-serif; text-align: center; overflow: hidden; }
+  h1 { color: #62e6a5; margin: 12px 0 5px; font-size: 24px; }
+  #info { font-size: 16px; color: #ffe36e; margin-bottom: 8px; height: 22px; }
+  #game {
+    width: 95%; max-width: 650px; height: 320px;
+    background: linear-gradient(#26364b, #111b2a);
+    border: 3px solid #62e6a5; border-radius: 14px;
+    margin: 0 auto; position: relative; overflow: hidden;
+  }
+  #ground {
+    position: absolute; bottom: 0; width: 200%; height: 48px;
+    background: repeating-linear-gradient(90deg, #555 0px, #555 30px, #444 30px, #444 60px);
+    animation: groundMove 0.6s linear infinite;
+  }
+  @keyframes groundMove {
+    from { transform: translateX(0); }
+    to { transform: translateX(-60px); }
+  }
+  #hero {
+    position: absolute; bottom: 48px; left: 95px; width: 45px; height: 85px;
+    z-index: 5; transition: transform 0.2s;
+  }
+  /* حركة الأقدام للمشي السريع */
+  .leg1 { transform-origin: 22px 58px; animation: walk1 0.28s infinite alternate; }
+  .leg2 { transform-origin: 22px 58px; animation: walk2 0.28s infinite alternate; }
+  @keyframes walk1 { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
+  @keyframes walk2 { from { transform: rotate(28deg); } to { transform: rotate(-28deg); } }
+
+  .zombie {
+    position: absolute; bottom: 48px; font-size: 40px; z-index: 4;
+    animation: zombieWalk 0.3s infinite alternate;
+  }
+  @keyframes zombieWalk { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-4px) rotate(3deg); } }
+
+  .obstacle { position: absolute; bottom: 48px; font-size: 34px; z-index: 4; }
+  #gun-pickup { position: absolute; bottom: 52px; font-size: 36px; display: none; z-index: 4; animation: floatGun 0.5s infinite alternate; }
+  @keyframes floatGun { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+  .bullet {
+    position: absolute; bottom: 88px; width: 14px; height: 6px;
+    background: #ffe36e; border-radius: 4px; box-shadow: 0 0 8px #ff9900; z-index: 6;
+  }
+  #controls { margin-top: 14px; display: flex; justify-content: center; gap: 15px; }
+  button {
+    border: 0; border-radius: 12px; padding: 14px 28px; font-size: 18px;
+    font-weight: bold; background: #62e6a5; color: #102018; cursor: pointer;
+  }
+  button:active { transform: scale(0.95); }
+  #shoot-btn { background: #ffbb55; display: none; }
+  #restart-btn { background: #ff6b6b; color: white; display: none; }
 </style>
 </head>
 <body>
-<h1>🧟 Zombie Corridor</h1>
-<div id="score">Score: 0</div>
-<div id="game">
-  <div id="ground"></div>
-  <div id="hero">🧍</div>
-  <div id="bullet">🟡</div>
-</div>
-<div id="message">اضغط Start Game للبدء</div>
-<button onclick="startGame()">Start Game</button>
-<br>
-<button onclick="move()">تقدم ➡️</button>
-<button onclick="jump()">اقفز ⬆️</button>
-<button id="shoot" onclick="shoot()">إطلاق 🎯</button>
+
+  <h1>Zombie Corridor</h1>
+  <div id="info">المسافة المتبقية للمسدس: <span id="steps">25</span> خطوة</div>
+
+  <div id="game">
+    <!-- البطل بتصميم مشابه للصورة -->
+    <div id="hero">
+      <svg viewBox="0 0 50 95" width="45" height="85">
+        <!-- أرجل رمادية متحركة -->
+        <line class="leg1" x1="25" y1="58" x2="25" y2="90" stroke="#5a6069" stroke-width="8" stroke-linecap="round"/>
+        <line class="leg2" x1="25" y1="58" x2="25" y2="90" stroke="#454a52" stroke-width="8" stroke-linecap="round"/>
+        <!-- الجسم (تيشيرت رمادي) -->
+        <rect x="17" y="28" width="16" height="32" rx="6" fill="#6b727d"/>
+        <!-- الرأس والشعر الداكن -->
+        <circle cx="26" cy="16" r="10" fill="#d9a077"/>
+        <path d="M16,15 Q16,4 28,5 Q36,6 35,15 Q30,11 22,12 Z" fill="#221c1a"/>
+        <!-- المنشفة الوردية حول الرقبة -->
+        <path d="M16,24 Q25,31 34,24 L32,34 Q25,37 18,34 Z" fill="#e8a2b8"/>
+        <rect x="27" y="27" width="6" height="15" rx="2" fill="#e8a2b8"/>
+        <!-- الذراع -->
+        <line id="hero-arm" x1="25" y1="33" x2="38" y2="44" stroke="#d9a077" stroke-width="6" stroke-linecap="round"/>
+        <!-- المسدس (يظهر عند الالتقاط) -->
+        <g id="hero-gun" style="display:none;">
+          <rect x="36" y="38" width="14" height="6" fill="#222"/>
+          <rect x="36" y="42" width="5" height="7" fill="#111"/>
+        </g>
+      </svg>
+    </div>
+
+    <div id="gun-pickup">🔫</div>
+    <div id="ground"></div>
+  </div>
+
+  <div id="controls">
+    <button id="jump-btn" onclick="jump()">قفز ⬆️</button>
+    <button id="shoot-btn" onclick="shoot()">إطلاق نار 🔥</button>
+    <button id="restart-btn" onclick="location.reload()">العب مرة أخرى 🔄</button>
+  </div>
 
 <script>
-const game=document.getElementById("game");
-const hero=document.getElementById("hero");
-const scoreText=document.getElementById("score");
-const message=document.getElementById("message");
-const bullet=document.getElementById("bullet");
+  const game = document.getElementById('game');
+  const hero = document.getElementById('hero');
+  const stepsEl = document.getElementById('steps');
+  const infoEl = document.getElementById('info');
+  const gunPickup = document.getElementById('gun-pickup');
+  const jumpBtn = document.getElementById('jump-btn');
+  const shootBtn = document.getElementById('shoot-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const ground = document.getElementById('ground');
 
-let score=0;
-let running=false;
-let jumping=false;
-let hasWeapon=false;
-let heroX=45;
-let objects=[];
+  let heroY = 0;
+  let velocityY = 0;
+  let isJumping = false;
+  let stepsLeft = 25;
+  let gameOver = false;
+  let hasGun = false;
+  let obstacles = [];
+  let zombies = [];
+  let bullets = [];
+  let zombiesToKill = 3;
 
-function startGame(){
-  score=0;
-  heroX=45;
-  running=true;
-  jumping=false;
-  hasWeapon=false;
-  objects.forEach(o=>o.remove());
-  objects=[];
-  hero.style.left=heroX+"px";
-  hero.style.bottom="48px";
-  hero.textContent="🧍";
-  bullet.style.display="none";
-  scoreText.textContent="Score: 0";
-  message.textContent="انطلق! تجنب الحواجز";
-  createObject("🌵",300,"obstacle");
-  createObject("🪨",500,"obstacle");
-  createObject("🧟",750,"zombie");
-}
-
-function createObject(symbol,x,type){
-  const el=document.createElement("div");
-  el.className=type;
-  el.textContent=symbol;
-  el.style.left=x+"px";
-  game.appendChild(el);
-  objects.push(el);
-}
-
-function move(){
-  if(!running)return;
-  heroX+=35;
-  if(heroX>game.clientWidth-75)heroX=45;
-  hero.style.left=heroX+"px";
-  score+=5;
-  scoreText.textContent="Score: "+score;
-  if(score>=100&&!hasWeapon){
-    hasWeapon=true;
-    hero.textContent="🔫";
-    message.textContent="وجدت أداة الإطلاق! اضغط إطلاق";
-  }
-  if(score%40===0)createObject("🧟",game.clientWidth,"zombie");
-  if(score%25===0)createObject("🌵",game.clientWidth,"obstacle");
-}
-
-function jump(){
-  if(!running||jumping)return;
-  jumping=true;
-  hero.style.bottom="145px";
-  setTimeout(()=>{
-    hero.style.bottom="48px";
-    jumping=false;
-  },650);
-}
-
-function shoot(){
-  if(!running)return;
-  if(!hasWeapon){
-    message.textContent="تقدم أولًا حتى تجد أداة الإطلاق!";
-    return;
-  }
-  bullet.style.display="block";
-  bullet.style.left=(heroX+55)+"px";
-  bullet.style.bottom="105px";
-  let x=heroX+55;
-  const timer=setInterval(()=>{
-    x+=18;
-    bullet.style.left=x+"px";
-    if(x>game.clientWidth){
-      clearInterval(timer);
-      bullet.style.display="none";
+  // إنشاء الزومبي الملاحقين خلف البطل
+  function spawnChasingZombies() {
+    for (let i = 0; i < 3; i++) {
+      let z = document.createElement('div');
+      z.className = 'zombie';
+      z.innerText = '🧟';
+      z.style.left = (15 - i * 28) + 'px';
+      game.appendChild(z);
+      zombies.push({ el: z, x: 15 - i * 28, hp: 2 });
     }
-    objects.forEach(o=>{
-      if(o.className==="zombie"&&Math.abs(o.offsetLeft-x)<35){
-        o.remove();
-        objects=objects.filter(a=>a!==o);
-        score+=20;
-        scoreText.textContent="Score: "+score;
-        message.textContent="أصبت الزومبي! +20";
-        clearInterval(timer);
-        bullet.style.display="none";
-      }
-    });
-  },30);
-}
+  }
+  spawnChasingZombies();
 
-document.addEventListener("keydown",e=>{
-  if(e.code==="ArrowRight")move();
-  if(e.code==="Space"){e.preventDefault();jump();}
-  if(e.code==="Enter")shoot();
-});
+  // القفز
+  function jump() {
+    if (!isJumping && !gameOver && !hasGun) {
+      velocityY = 13.5;
+      isJumping = true;
+    }
+  }
+
+  // إطلاق النار للخلف نحو الزومبي
+  function shoot() {
+    if (!hasGun || gameOver) return;
+    let b = document.createElement('div');
+    b.className = 'bullet';
+    b.style.left = '85px';
+    game.appendChild(b);
+    bullets.push({ el: b, x: 85 });
+  }
+
+  // عداد الخطوات وتوليد العقبات
+  let stepTimer = setInterval(() => {
+    if (gameOver || hasGun) return;
+    if (stepsLeft > 0) {
+      stepsLeft--;
+      stepsEl.innerText = stepsLeft;
+      // توليد عقبة كل بضع خطوات
+      if (stepsLeft > 2 && stepsLeft % 5 === 0) {
+        let obs = document.createElement('div');
+        obs.className = 'obstacle';
+        obs.innerText = Math.random() > 0.5 ? '🚧' : '📦';
+        obs.style.left = '650px';
+        game.appendChild(obs);
+        obstacles.push({ el: obs, x: 650 });
+      }
+    } else if (gunPickup.style.display !== 'block' && obstacles.length === 0) {
+      // إظهار المسدس في نهاية الممر
+      gunPickup.style.display = 'block';
+      gunPickup.style.left = '620px';
+      infoEl.innerText = "المسدس أمامك! التقطه!";
+    }
+  }, 450);
+
+  // الحلقة الرئيسية للعبة
+  function update() {
+    if (gameOver) return;
+
+    // فيزياء القفز
+    if (isJumping) {
+      heroY += velocityY;
+      velocityY -= 0.75;
+      if (heroY <= 0) {
+        heroY = 0;
+        isJumping = false;
+      }
+      hero.style.bottom = (48 + heroY) + 'px';
+    }
+
+    // حركة العقبات
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      let o = obstacles[i];
+      o.x -= 5.5;
+      o.el.style.left = o.x + 'px';
+
+      // فحص الاصطدام مع البطل
+      if (o.x < 125 && o.x > 95 && heroY < 32) {
+        endGame("تعثر البطل وأمسك به الزومبي! 💀");
+      }
+      if (o.x < -40) {
+        o.el.remove();
+        obstacles.splice(i, 1);
+      }
+    }
+
+    // حركة المسدس نحو البطل في النهاية
+    if (gunPickup.style.display === 'block' && !hasGun) {
+      let gx = parseFloat(gunPickup.style.left);
+      gx -= 5.5;
+      gunPickup.style.left = gx + 'px';
+
+      if (gx <= 115) {
+        // التقاط المسدس والاستدارة للزومبي
+        hasGun = true;
+        gunPickup.style.display = 'none';
+        ground.style.animationPlayState = 'paused';
+        document.querySelectorAll('.leg1, .leg2').forEach(l => l.style.animationPlayState = 'paused');
+        
+        // تدوير البطل لليسار لمواجهة الزومبي
+        hero.style.transform = 'scaleX(-1)';
+        document.getElementById('hero-arm').setAttribute('y2', '41');
+        document.getElementById('hero-gun').style.display = 'block';
+
+        jumpBtn.style.display = 'none';
+        shootBtn.style.display = 'inline-block';
+        infoEl.innerText = "استدر وأطلق النار على الزومبي! 🔥";
+      }
+    }
+
+    // اقتراب الزومبي عند مرحلة إطلاق النار
+    if (hasGun) {
+      for (let z of zombies) {
+        z.x += 0.45; // يقتربون ببطء
+        z.el.style.left = z.x + 'px';
+        if (z.x >= 80) {
+          endGame("وصل إليك الزومبي! حاول إطلاق النار أسرع 💀");
+        }
+      }
+    }
+
+    // حركة الرصاص وإصابة الزومبي
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      let b = bullets[i];
+      b.x -= 10;
+      b.el.style.left = b.x + 'px';
+
+      for (let j = zombies.length - 1; j >= 0; j--) {
+        let z = zombies[j];
+        if (b.x <= z.x + 25) {
+          b.el.remove();
+          bullets.splice(i, 1);
+          z.hp--;
+          z.el.style.opacity = '0.5';
+          if (z.hp <= 0) {
+            z.el.remove();
+            zombies.splice(j, 1);
+            zombiesToKill--;
+            if (zombiesToKill === 0) {
+              endGame("🎉 مبروك! قتلت جميع الزومبي وانهيت اللعبة بنجاح!");
+            }
+          }
+          break;
+        }
+      }
+      if (b && b.x < -20) {
+        b.el.remove();
+        bullets.splice(i, 1);
+      }
+    }
+
+    requestAnimationFrame(update);
+  }
+
+  function endGame(msg) {
+    gameOver = true;
+    ground.style.animationPlayState = 'paused';
+    infoEl.innerText = msg;
+    jumpBtn.style.display = 'none';
+    shootBtn.style.display = 'none';
+    restartBtn.style.display = 'inline-block';
+  }
+
+  requestAnimationFrame(update);
 </script>
 </body>
 </html>
